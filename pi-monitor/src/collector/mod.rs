@@ -1,3 +1,4 @@
+mod hailo;
 mod network;
 mod raspi_dash;
 mod system;
@@ -28,5 +29,11 @@ pub async fn start_collectors(
         let s = state.clone();
         let nodes = inventory_nodes.clone();
         async move { raspi_dash::run(s, nodes).await }
+    });
+
+    tokio::spawn({
+        let s = state.clone();
+        let nodes = inventory_nodes.clone();
+        async move { hailo::run(s, nodes).await }
     });
 }

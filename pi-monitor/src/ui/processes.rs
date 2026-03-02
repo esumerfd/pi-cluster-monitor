@@ -31,13 +31,13 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ProcessState) {
         .map(|_| Constraint::Ratio(1, n as u32))
         .collect();
 
-    let columns = Layout::default()
-        .direction(Direction::Horizontal)
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
         .constraints(constraints)
         .split(area);
 
     for (i, node) in state.nodes.iter().enumerate() {
-        render_node_panel(frame, columns[i], node);
+        render_node_panel(frame, rows[i], node);
     }
 }
 

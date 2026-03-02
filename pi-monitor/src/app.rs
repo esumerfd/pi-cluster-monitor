@@ -161,6 +161,79 @@ impl DiskInfo {
     }
 }
 
+// ── Hailo state ──────────────────────────────────────────────────────────────
+
+/// Identity fields from `hailo` key of the Hailo server `/api/stats`
+#[derive(Debug, Clone, Default, serde::Deserialize)]
+pub struct HailoDevice {
+    #[serde(default)]
+    #[allow(dead_code)]
+    pub present: bool,
+    #[serde(default)]
+    #[allow(dead_code)]
+    pub firmware_ok: bool,
+    /// Hailo-10H onboard DDR in GB (spec constant)
+    #[serde(default)]
+    pub ddr_total_gb: f32,
+    #[allow(dead_code)]
+    pub device_id: Option<String>,
+    #[allow(dead_code)]
+    pub pcie_desc: Option<String>,
+    pub pcie_current_link_speed: Option<String>,
+    pub pcie_current_link_width: Option<String>,
+    pub fw_version: Option<String>,
+    pub architecture: Option<String>,
+    pub nn_clock_mhz: Option<u32>,
+    #[serde(default)]
+    pub loaded_networks: u32,
+    #[serde(default)]
+    pub network_names: Vec<String>,
+    #[allow(dead_code)]
+    pub error: Option<String>,
+}
+
+/// Performance counters from `hailo_perf` key (hailo_perf_query binary output)
+#[derive(Debug, Clone, Default, serde::Deserialize)]
+pub struct HailoPerf {
+    #[serde(default)]
+    pub nnc_utilization: f32,
+    #[serde(default)]
+    pub cpu_utilization: f32,
+    #[serde(default)]
+    pub dsp_utilization: f32,
+    #[serde(default)]
+    pub on_die_temperature: f32,
+    #[serde(default)]
+    pub on_die_voltage: f32,
+    #[serde(default)]
+    #[allow(dead_code)]
+    pub ram_size_total: u64,
+    #[serde(default)]
+    #[allow(dead_code)]
+    pub ram_size_used: u64,
+}
+
+/// Live Hailo state written by the hailo collector
+#[derive(Debug, Clone, Default)]
+pub struct HailoState {
+    /// True when the Hailo server responded successfully on the last poll
+    pub available: bool,
+    pub device: HailoDevice,
+    pub perf: HailoPerf,
+    /// Sentinel inference FPS (None if Sentinel is not running)
+    pub sentinel_fps: Option<f32>,
+    /// None = server didn't provide it; Some(true) = OK, Some(false) = flags present
+    pub throttle_ok: Option<bool>,
+    /// Active throttle flag strings, e.g. ["under-voltage", "throttled"]
+    pub throttle_flags: Vec<String>,
+    /// On-die temperature history (last 60 samples) for the sparkline
+    pub temp_history: Vec<f32>,
+    /// Last connection error message (None when last poll succeeded)
+    pub error: Option<String>,
+}
+
+// ── Process state ─────────────────────────────────────────────────────────────
+
 /// One process entry from raspi-dash `/api/stats` → `processes[]`
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct ApiProcess {
@@ -231,6 +304,7 @@ pub struct AppState {
     pub system: SystemMetrics,
     pub network: NetworkState,
     pub processes: ProcessState,
+    pub hailo: HailoState,
     pub alert_count: u32,
 }
 
@@ -288,6 +362,10 @@ impl App {
 
     pub fn process_snapshot(&self) -> ProcessState {
         self.state.read().unwrap().processes.clone()
+    }
+
+    pub fn hailo_snapshot(&self) -> HailoState {
+        self.state.read().unwrap().hailo.clone()
     }
 
     pub fn network_snapshot(&self) -> NetworkState {

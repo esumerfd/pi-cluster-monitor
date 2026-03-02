@@ -19,6 +19,7 @@ pub fn render(frame: &mut Frame, app: &App) {
     let state = app.system_snapshot();
     let net_state = app.network_snapshot();
     let proc_state = app.process_snapshot();
+    let hailo_state = app.hailo_snapshot();
     let alerts = app.alert_count();
 
     let visible = Tab::visible(state.hailo_available);
@@ -65,7 +66,7 @@ pub fn render(frame: &mut Frame, app: &App) {
 
     // ── Content ───────────────────────────────────────────────────────────────
     match app.active_tab {
-        Tab::Overview => overview::render(frame, chunks[1], &state),
+        Tab::Overview => overview::render(frame, chunks[1], &state, &hailo_state),
         Tab::System => system::render(frame, chunks[1], &state),
         Tab::Network => network::render(frame, chunks[1], &net_state, &state),
         Tab::Processes => processes::render(frame, chunks[1], &proc_state),
