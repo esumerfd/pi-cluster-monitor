@@ -1,7 +1,5 @@
-mod hailo;
 mod network;
-mod raspi_dash;
-mod system;
+mod node_agent;
 
 use std::sync::{Arc, RwLock};
 use crate::app::AppState;
@@ -15,11 +13,6 @@ pub async fn start_collectors(
 ) {
     tokio::spawn({
         let s = state.clone();
-        async move { system::run(s).await }
-    });
-
-    tokio::spawn({
-        let s = state.clone();
         let nodes = inventory_nodes.clone();
         let path = inventory_path.clone();
         async move { network::run(s, nodes, path).await }
@@ -28,12 +21,6 @@ pub async fn start_collectors(
     tokio::spawn({
         let s = state.clone();
         let nodes = inventory_nodes.clone();
-        async move { raspi_dash::run(s, nodes).await }
-    });
-
-    tokio::spawn({
-        let s = state.clone();
-        let nodes = inventory_nodes.clone();
-        async move { hailo::run(s, nodes).await }
+        async move { node_agent::run(s, nodes).await }
     });
 }

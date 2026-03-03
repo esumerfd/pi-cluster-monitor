@@ -1,0 +1,3 @@
+[workspace]
+members = ["pi-monitor", "pi-agent"]
+resolver = "2"

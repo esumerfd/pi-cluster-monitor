@@ -91,8 +91,8 @@ pub struct SystemMetrics {
     pub cpu_voltage: f32,
     /// Load averages: 1min, 5min, 15min
     pub load_avg: [f32; 3],
-    /// Throttle flags bitmask from vcgencmd (0 = OK)
-    pub throttle_flags: u32,
+    /// Active throttle flag names (empty = OK)
+    pub throttle_flags: Vec<String>,
 
     /// CPU temperature in °C
     pub cpu_temp_c: f32,
@@ -109,6 +109,7 @@ pub struct SystemMetrics {
     /// RAM: used bytes
     pub mem_used: u64,
     /// RAM: available bytes
+    #[allow(dead_code)]
     pub mem_available: u64,
     /// RAM buffer/cache bytes
     pub mem_bufcache: u64,
@@ -129,9 +130,6 @@ pub struct SystemMetrics {
     /// Disk I/O rates
     pub disk_read_kbps: f32,
     pub disk_write_kbps: f32,
-
-    /// Whether hailortcli is detected on this system
-    pub hailo_available: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -229,6 +227,7 @@ pub struct HailoState {
     /// On-die temperature history (last 60 samples) for the sparkline
     pub temp_history: Vec<f32>,
     /// Last connection error message (None when last poll succeeded)
+    #[allow(dead_code)]
     pub error: Option<String>,
 }
 
@@ -327,21 +326,21 @@ impl App {
     }
 
     pub fn next_tab(&mut self) {
-        let hailo = self.state.read().unwrap().system.hailo_available;
+        let hailo = self.state.read().unwrap().hailo.available;
         let visible = Tab::visible(hailo);
         let pos = visible.iter().position(|t| *t == self.active_tab).unwrap_or(0);
         self.active_tab = visible[(pos + 1) % visible.len()];
     }
 
     pub fn prev_tab(&mut self) {
-        let hailo = self.state.read().unwrap().system.hailo_available;
+        let hailo = self.state.read().unwrap().hailo.available;
         let visible = Tab::visible(hailo);
         let pos = visible.iter().position(|t| *t == self.active_tab).unwrap_or(0);
         self.active_tab = visible[if pos == 0 { visible.len() - 1 } else { pos - 1 }];
     }
 
     pub fn handle_key(&mut self, c: char) -> Result<()> {
-        let hailo = self.state.read().unwrap().system.hailo_available;
+        let hailo = self.state.read().unwrap().hailo.available;
         match c {
             'q' | 'Q' => self.running = false,
             '?' => self.show_help = !self.show_help,

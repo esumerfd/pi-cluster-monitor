@@ -1,0 +1,20 @@
+# Cargo workspace configuration
+#
+# Cross-compilation for Raspberry Pi (aarch64)
+# ─────────────────────────────────────────────
+# Two supported paths:
+#
+# 1. `cross` (recommended — uses Docker, no extra toolchain needed):
+#      cargo install cross --git https://github.com/cross-rs/cross
+#      make cross-agent                 # from workspace root
+#      make cross   (from pi-agent/)
+#
+# 2. Native toolchain (no Docker):
+#      # macOS: brew install messense/macos-cross-toolchains/aarch64-unknown-linux-gnu
+#      # Linux: apt install gcc-aarch64-linux-gnu
+#      make cross-agent CROSS_TOOL=cargo
+#
+# The linker below is only used by path 2; `cross` ignores it.
+
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"

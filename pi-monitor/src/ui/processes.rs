@@ -124,7 +124,7 @@ fn render_node_panel(frame: &mut Frame, area: Rect, node: &NodeProcesses) {
     // Bottom hint
     frame.render_widget(
         Paragraph::new(Line::from(Span::styled(
-            "  top 5 by CPU% · raspi-dash",
+            "  top 5 by CPU% · pi-agent",
             Style::default().fg(Color::DarkGray),
         ))),
         rows_layout[1],

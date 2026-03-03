@@ -22,7 +22,7 @@ pub fn render(frame: &mut Frame, app: &App) {
     let hailo_state = app.hailo_snapshot();
     let alerts = app.alert_count();
 
-    let visible = Tab::visible(state.hailo_available);
+    let visible = Tab::visible(hailo_state.available);
 
     let tab_titles: Vec<Line> = visible
         .iter()

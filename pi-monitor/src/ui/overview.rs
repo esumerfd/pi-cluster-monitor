@@ -142,8 +142,6 @@ fn render_status_and_temp(frame: &mut Frame, area: Rect, m: &SystemMetrics, hail
 
     let hailo_span = if hailo.available {
         Span::styled("  Hailo NPU  ● ONLINE", Style::default().fg(Color::Green))
-    } else if m.hailo_available {
-        Span::styled("  Hailo NPU  ● LOCAL", Style::default().fg(Color::Yellow))
     } else {
         Span::styled("  Hailo NPU  ○ —", Style::default().fg(Color::DarkGray))
     };

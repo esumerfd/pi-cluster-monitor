@@ -79,11 +79,11 @@ fn render_cpu(frame: &mut Frame, area: Rect, m: &SystemMetrics) {
     }
 
     // Detail line
-    let throttle_str = if m.throttle_flags == 0 {
+    let throttle_str = if m.throttle_flags.is_empty() {
         Span::styled("✓ OK", Style::default().fg(Color::Green))
     } else {
         Span::styled(
-            format!("⚠ 0x{:x}", m.throttle_flags),
+            format!("⚠ {}", m.throttle_flags.join(",")),
             Style::default().fg(Color::Red),
         )
     };
