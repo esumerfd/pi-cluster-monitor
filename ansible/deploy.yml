@@ -1,0 +1,7 @@
+---
+- name: Deploy pi-agent to Raspberry Pi nodes
+  hosts: pi_nodes
+  become: true
+
+  roles:
+    - pi-agent

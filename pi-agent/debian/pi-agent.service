@@ -1,0 +1,15 @@
+[Unit]
+Description=Pi Cluster Monitor Agent
+After=network.target
+
+[Service]
+Type=simple
+User=pi-agent
+Group=video
+ExecStart=/usr/bin/pi-agent
+Restart=on-failure
+RestartSec=5
+Environment=RUST_LOG=info
+
+[Install]
+WantedBy=multi-user.target

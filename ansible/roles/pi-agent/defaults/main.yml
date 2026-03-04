@@ -1,0 +1,11 @@
+---
+pi_agent_repo: "esumerfd/pi-cluster-monitor"
+
+# Set to a specific tag (e.g. "v0.1.0") or "latest" to auto-resolve
+pi_agent_version: "latest"
+
+# Port the agent listens on
+pi_agent_port: 8765
+
+# System user the service runs as
+pi_agent_user: pi-agent

@@ -1,0 +1,56 @@
+---
+- name: Resolve latest release tag from GitHub API
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/{{ pi_agent_repo }}/releases/latest"
+    headers:
+      Accept: "application/vnd.github.v3+json"
+    return_content: true
+  register: _github_release
+  when: pi_agent_version == "latest"
+
+- name: Set resolved version fact
+  ansible.builtin.set_fact:
+    _pi_agent_tag: "{{ _github_release.json.tag_name if pi_agent_version == 'latest' else pi_agent_version }}"
+
+- name: Find .deb asset URL in release
+  ansible.builtin.set_fact:
+    _pi_agent_deb_url: >-
+      {{ (_github_release.json.assets
+          | selectattr('name', 'match', '.*\\.deb')
+          | map(attribute='browser_download_url')
+          | list
+          | first)
+         if pi_agent_version == 'latest'
+         else 'https://github.com/' ~ pi_agent_repo ~ '/releases/download/' ~ _pi_agent_tag ~ '/pi-agent_' ~ (_pi_agent_tag | regex_replace('^v','')) ~ '_arm64.deb' }}
+
+- name: Create pi-agent system user
+  ansible.builtin.user:
+    name: "{{ pi_agent_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+    groups: video
+    append: true
+
+- name: Download pi-agent .deb
+  ansible.builtin.get_url:
+    url: "{{ _pi_agent_deb_url }}"
+    dest: /tmp/pi-agent.deb
+    mode: "0644"
+    force: true
+
+- name: Install pi-agent .deb
+  ansible.builtin.apt:
+    deb: /tmp/pi-agent.deb
+
+- name: Remove downloaded .deb
+  ansible.builtin.file:
+    path: /tmp/pi-agent.deb
+    state: absent
+
+- name: Ensure pi-agent service is started and enabled
+  ansible.builtin.systemd:
+    name: pi-agent
+    state: started
+    enabled: true
+    daemon_reload: true
