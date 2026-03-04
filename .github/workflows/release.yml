@@ -57,6 +57,7 @@ jobs:
           echo "name=$(basename $path)" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release and upload .deb
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.deb.outputs.path }}
