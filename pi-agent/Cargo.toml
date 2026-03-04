@@ -2,6 +2,18 @@
 name = "pi-agent"
 version = "0.1.0"
 edition = "2024"
+description = "HTTP agent exposing system metrics for the Pi Cluster Monitor TUI"
+authors = ["Edward Sumeriski <esumerfd@gmail.com>"]
+
+[package.metadata.deb]
+maintainer = "Edward Sumeriski <esumerfd@gmail.com>"
+copyright = "2026, Edward Sumeriski"
+extended-description = "Lightweight HTTP server that exposes CPU, memory, disk, thermal, and Hailo NPU metrics for the Pi Cluster Monitor TUI dashboard."
+depends = "$auto"
+section = "utility"
+priority = "optional"
+maintainer-scripts = "debian/"
+systemd-units = { enable = true }
 
 [[bin]]
 name = "pi-agent"
