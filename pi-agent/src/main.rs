@@ -7,7 +7,7 @@ use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
 use axum::{Router, routing::get};
-use clap::Parser;
+use clap::{ArgAction, Parser};
 use tracing::info;
 
 use types::ApiStats;
@@ -22,18 +22,28 @@ struct Args {
     /// Collector poll interval in milliseconds
     #[arg(long, default_value_t = 2000)]
     interval: u64,
+
+    /// Verbosity: -v requests, -vv HTTP headers+JSON, -vvv collector tick
+    #[arg(short = 'v', long = "verbose", action = ArgAction::Count)]
+    verbose: u8,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let args = Args::parse();
+
+    let default_filter = match args.verbose {
+        0 => "pi_agent=warn",
+        1 => "pi_agent=info",
+        2 => "pi_agent=debug",
+        _ => "pi_agent=trace",
+    };
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "pi_agent=info".into()),
+                .unwrap_or_else(|_| default_filter.into()),
         )
         .init();
-
-    let args = Args::parse();
 
     let state: Arc<RwLock<ApiStats>> = Arc::new(RwLock::new(ApiStats::default()));
 
@@ -52,7 +62,7 @@ async fn main() -> Result<()> {
     info!("pi-agent listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await?;
 
     Ok(())
 }

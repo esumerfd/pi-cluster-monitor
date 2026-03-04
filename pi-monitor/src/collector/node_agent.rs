@@ -21,7 +21,7 @@ use crate::app::{
 };
 use crate::inventory::InventoryNode;
 
-const AGENT_PORT: u16 = 8765;
+const DEFAULT_AGENT_PORT: u16 = 8765;
 const POLL_INTERVAL: Duration = Duration::from_secs(5);
 const HTTP_TIMEOUT: Duration = Duration::from_secs(3);
 const TOP_N: usize = 5;
@@ -121,7 +121,7 @@ impl NodeCtx {
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
-pub async fn run(state: Arc<RwLock<AppState>>, nodes: Vec<InventoryNode>) {
+pub async fn run(state: Arc<RwLock<AppState>>, nodes: Vec<InventoryNode>, agent_port: u16) {
     if nodes.is_empty() {
         return;
     }
@@ -161,7 +161,7 @@ pub async fn run(state: Arc<RwLock<AppState>>, nodes: Vec<InventoryNode>) {
             .enumerate()
             .map(|(i, node)| {
                 let client = client.clone();
-                let url = format!("http://{}:{}/api/stats", node.ansible_host, AGENT_PORT);
+                let url = format!("http://{}:{}/api/stats", node.ansible_host, agent_port);
                 let node_name = node.name.clone();
                 let host = node.ansible_host.clone();
                 tokio::spawn(async move {

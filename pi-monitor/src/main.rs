@@ -21,10 +21,19 @@ use collector::start_collectors;
 
 #[derive(Parser, Debug)]
 #[command(name = "pi-monitor", about = "Raspberry Pi cluster TUI monitor")]
+#[group(multiple = false)]
 struct Args {
     /// Path to an Ansible inventory YAML file
-    #[arg(short, long, value_name = "FILE")]
+    #[arg(short, long, value_name = "FILE", group = "source")]
     inventory: Option<PathBuf>,
+
+    /// Single server to monitor (hostname or IP address)
+    #[arg(short, long, value_name = "HOST", group = "source")]
+    server: Option<String>,
+
+    /// Override the default pi-agent port (default: 8765)
+    #[arg(short, long, value_name = "PORT", default_value_t = 8765)]
+    port: u16,
 }
 
 #[tokio::main]
@@ -49,24 +58,29 @@ async fn main() -> Result<()> {
             .init();
     }
 
-    // Load inventory (optional)
-    let (inventory_nodes, inventory_path) = match &args.inventory {
-        Some(path) => {
-            let nodes = inventory::parse(path).unwrap_or_else(|e| {
-                eprintln!("Warning: could not load inventory {}: {}", path.display(), e);
-                vec![]
-            });
-            let path_str = path.display().to_string();
-            (nodes, path_str)
-        }
-        None => (vec![], String::new()),
+    // Load inventory or synthesise a single-node list from --server
+    let (inventory_nodes, inventory_path) = if let Some(path) = &args.inventory {
+        let nodes = inventory::parse(path).unwrap_or_else(|e| {
+            eprintln!("Warning: could not load inventory {}: {}", path.display(), e);
+            vec![]
+        });
+        (nodes, path.display().to_string())
+    } else if let Some(host) = &args.server {
+        let node = inventory::InventoryNode {
+            name: host.clone(),
+            ansible_host: host.clone(),
+            groups: vec![],
+        };
+        (vec![node], host.clone())
+    } else {
+        (vec![], String::new())
     };
 
     let mut app = App::new();
     let state = app.state.clone();
 
     // Start background collectors
-    start_collectors(state, inventory_nodes, inventory_path).await;
+    start_collectors(state, inventory_nodes, inventory_path, args.port).await;
 
     // Set up terminal
     enable_raw_mode()?;

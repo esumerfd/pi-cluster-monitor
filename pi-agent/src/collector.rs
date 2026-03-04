@@ -67,8 +67,12 @@ pub async fn run(state: Arc<RwLock<ApiStats>>, interval_ms: u64) {
         ctx.hailo_tick = (ctx.hailo_tick + 1) % 5;
 
         let stats = collect(&mut ctx, poll_hailo).await;
+        tracing::trace!(
+            "collector tick: hostname={} uptime={:.0}s load={:.2} hailo={}",
+            stats.system.hostname, stats.system.uptime_s,
+            stats.cpu.load_1, stats.hailo.present
+        );
         *state.write().unwrap() = stats;
-        debug!("collector tick complete");
     }
 }
 
@@ -422,11 +426,22 @@ fn read_file(path: &str) -> Option<String> {
 }
 
 async fn run_cmd(cmd: &str, args: &[&str]) -> Option<String> {
-    let out = tokio::process::Command::new(cmd)
-        .args(args)
-        .output()
-        .await
-        .ok()?;
+    let full = format!("{} {}", cmd, args.join(" "));
+    debug!("spawn: {}", full);
+
+    let out = match tokio::process::Command::new(cmd).args(args).output().await {
+        Ok(o) => o,
+        Err(e) => {
+            debug!("spawn: {} → failed to start: {}", full, e);
+            return None;
+        }
+    };
+
+    let code = out.status.code()
+        .map(|c| c.to_string())
+        .unwrap_or_else(|| "signal".to_string());
+    debug!("spawn: {} → exit {}", full, code);
+
     if out.status.success() {
         String::from_utf8(out.stdout).ok()
     } else {

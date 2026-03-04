@@ -1,0 +1,3 @@
+[toolchain]
+channel = "stable-x86_64-apple-darwin"
+targets = ["aarch64-unknown-linux-gnu"]
