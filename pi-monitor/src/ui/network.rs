@@ -8,6 +8,14 @@ use ratatui::{
 
 use crate::app::{NetworkState, ReachStatus, SystemMetrics};
 
+fn port_cell(status: &ReachStatus) -> Cell<'static> {
+    match status {
+        ReachStatus::Unknown => Cell::from(Span::styled("?", Style::default().fg(Color::DarkGray))),
+        ReachStatus::Up { .. } => Cell::from(Span::styled("✓", Style::default().fg(Color::Green))),
+        ReachStatus::Down => Cell::from(Span::styled("✗", Style::default().fg(Color::Red))),
+    }
+}
+
 pub fn render(frame: &mut Frame, area: Rect, net: &NetworkState, sys: &SystemMetrics) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -82,7 +90,7 @@ fn render_nodes(frame: &mut Frame, area: Rect, net: &NetworkState) {
         return;
     }
 
-    let header = Row::new(vec!["Name", "Host", "Groups", "Status", "IP", "Latency"])
+    let header = Row::new(vec!["Name", "Host", "Groups", "IP", "Latency", "SSH:22", "Agent"])
         .style(Style::default().add_modifier(Modifier::BOLD))
         .height(1);
 
@@ -96,31 +104,30 @@ fn render_nodes(frame: &mut Frame, area: Rect, net: &NetworkState) {
                 ns.node.groups.join(", ")
             };
 
-            let (status_cell, ip_cell, lat_cell) = match &ns.status {
-                ReachStatus::Unknown => (
-                    Cell::from(Span::styled("● checking", Style::default().fg(Color::DarkGray))),
-                    Cell::from("—"),
-                    Cell::from("—"),
-                ),
+            let (ip_cell, lat_cell) = match &ns.status {
+                ReachStatus::Unknown => (Cell::from("—"), Cell::from("—")),
                 ReachStatus::Up { ip, latency_ms } => (
-                    Cell::from(Span::styled("● UP", Style::default().fg(Color::Green))),
                     Cell::from(ip.clone()),
                     Cell::from(format!("{} ms", latency_ms)),
                 ),
-                ReachStatus::Down => (
-                    Cell::from(Span::styled("○ DOWN", Style::default().fg(Color::Red))),
-                    Cell::from("—"),
-                    Cell::from("—"),
-                ),
+                ReachStatus::Down => (Cell::from("—"), Cell::from("—")),
+            };
+
+            let ssh_cell = port_cell(&ns.status);
+            let agent_cell = match ns.agent_up {
+                None => Cell::from(Span::styled("?", Style::default().fg(Color::DarkGray))),
+                Some(true) => Cell::from(Span::styled("✓", Style::default().fg(Color::Green))),
+                Some(false) => Cell::from(Span::styled("✗", Style::default().fg(Color::Red))),
             };
 
             Row::new(vec![
                 Cell::from(ns.node.name.clone()),
                 Cell::from(ns.node.ansible_host.clone()),
                 Cell::from(groups),
-                status_cell,
                 ip_cell,
                 lat_cell,
+                ssh_cell,
+                agent_cell,
             ])
         })
         .collect();
@@ -131,9 +138,10 @@ fn render_nodes(frame: &mut Frame, area: Rect, net: &NetworkState) {
             Constraint::Length(12), // Name
             Constraint::Length(18), // Host
             Constraint::Length(14), // Groups
-            Constraint::Length(12), // Status
             Constraint::Length(16), // IP
             Constraint::Length(10), // Latency
+            Constraint::Length(8),  // SSH:22
+            Constraint::Length(8),  // Agent
         ],
     )
     .header(header)

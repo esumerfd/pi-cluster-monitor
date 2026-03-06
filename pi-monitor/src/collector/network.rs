@@ -2,8 +2,8 @@
 ///
 /// For each node:
 ///   1. DNS-resolve `ansible_host` (handles .local via mDNS on Linux/macOS)
-///   2. Attempt TCP connect to port 22 with a 2-second timeout
-///   3. Record status (Up with IP + latency, or Down) in AppState.network
+///   2. TCP connect port 22 (SSH) and the pi-agent port concurrently
+///   3. Record status in AppState.network
 
 use std::net::{SocketAddr, UdpSocket};
 use std::sync::{Arc, RwLock};
@@ -23,6 +23,7 @@ pub async fn run(
     state: Arc<RwLock<AppState>>,
     nodes: Vec<InventoryNode>,
     inventory_path: String,
+    agent_port: u16,
 ) {
     // Write inventory path and initial Unknown entries once at startup
     {
@@ -34,6 +35,7 @@ pub async fn run(
             .map(|n| NodeStatus {
                 node: n.clone(),
                 status: ReachStatus::Unknown,
+                agent_up: None,
             })
             .collect();
     }
@@ -57,14 +59,14 @@ pub async fn run(
         state.write().unwrap().network.local_ip = ip;
 
         // Probe each node concurrently
-        let results: Vec<(usize, ReachStatus)> =
-            futures_probe(&nodes).await;
+        let results = futures_probe(&nodes, agent_port).await;
 
         {
             let mut s = state.write().unwrap();
-            for (idx, status) in results {
+            for (idx, status, agent_up) in results {
                 if let Some(entry) = s.network.nodes.get_mut(idx) {
                     entry.status = status;
+                    entry.agent_up = agent_up;
                 }
             }
         }
@@ -73,14 +75,17 @@ pub async fn run(
     }
 }
 
-/// Probe all nodes concurrently, returning (index, ReachStatus) pairs.
-async fn futures_probe(nodes: &[InventoryNode]) -> Vec<(usize, ReachStatus)> {
+/// Probe all nodes concurrently, returning (index, ReachStatus, agent_up) tuples.
+async fn futures_probe(
+    nodes: &[InventoryNode],
+    agent_port: u16,
+) -> Vec<(usize, ReachStatus, Option<bool>)> {
     let mut handles = Vec::with_capacity(nodes.len());
     for (i, node) in nodes.iter().enumerate() {
         let host = node.ansible_host.clone();
         handles.push(tokio::spawn(async move {
-            let status = probe_node(&host).await;
-            (i, status)
+            let (status, agent_up) = probe_node(&host, agent_port).await;
+            (i, status, agent_up)
         }));
     }
     let mut results = Vec::with_capacity(handles.len());
@@ -92,31 +97,40 @@ async fn futures_probe(nodes: &[InventoryNode]) -> Vec<(usize, ReachStatus)> {
     results
 }
 
-/// Probe a single host: DNS resolve → TCP:22 connect.
-async fn probe_node(host: &str) -> ReachStatus {
-    let addr_str = format!("{}:22", host);
+/// Probe a single host: DNS resolve once, then TCP connect port 22 and agent_port concurrently.
+async fn probe_node(host: &str, agent_port: u16) -> (ReachStatus, Option<bool>) {
     let start = Instant::now();
 
-    // Resolve hostname (handles .local via mDNS on the OS side)
-    let addrs: Vec<SocketAddr> = match tokio::net::lookup_host(&addr_str).await {
+    // Resolve hostname once (handles .local via mDNS on the OS side)
+    let addrs: Vec<SocketAddr> = match tokio::net::lookup_host(format!("{}:22", host)).await {
         Ok(iter) => iter.collect(),
-        Err(_) => return ReachStatus::Down,
+        Err(_) => return (ReachStatus::Down, None),
     };
 
-    let Some(addr) = addrs.first() else {
-        return ReachStatus::Down;
+    let Some(&addr22) = addrs.first() else {
+        return (ReachStatus::Down, None);
     };
 
-    let ip = addr.ip().to_string();
+    let ip = addr22.ip().to_string();
+    let mut addr_agent = addr22;
+    addr_agent.set_port(agent_port);
 
-    // Try TCP connect to port 22
-    match timeout(PROBE_TIMEOUT, TcpStream::connect(addr)).await {
-        Ok(Ok(_)) => {
-            let latency_ms = start.elapsed().as_millis() as u32;
-            ReachStatus::Up { ip, latency_ms }
-        }
+    // Probe both ports concurrently
+    let (ssh_result, agent_result) = tokio::join!(
+        timeout(PROBE_TIMEOUT, TcpStream::connect(addr22)),
+        timeout(PROBE_TIMEOUT, TcpStream::connect(addr_agent)),
+    );
+
+    let latency_ms = start.elapsed().as_millis() as u32;
+
+    let ssh_status = match ssh_result {
+        Ok(Ok(_)) => ReachStatus::Up { ip, latency_ms },
         _ => ReachStatus::Down,
-    }
+    };
+
+    let agent_up = Some(matches!(agent_result, Ok(Ok(_))));
+
+    (ssh_status, agent_up)
 }
 
 /// Get the primary non-loopback IPv4 address by connecting a UDP socket.

@@ -284,6 +284,8 @@ impl Default for ReachStatus {
 pub struct NodeStatus {
     pub node: InventoryNode,
     pub status: ReachStatus,
+    /// None = not yet probed, Some(true/false) = last TCP probe result
+    pub agent_up: Option<bool>,
 }
 
 /// Network-level state: local identity + cluster node reachability

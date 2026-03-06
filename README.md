@@ -64,6 +64,11 @@ Plugin-like panel system. Support additional data sources (Kubernetes metrics, G
   - Tech: Rust, ratatui, libpcap, eBPF (Linux)
   - Key concepts to borrow: connection lifecycle view, protocol-aware tracking, per-process attribution, filter/search UX
 
+### Acknowledgements
+
+- [RaspiDash System Monitor](https://github.com/kristoffersingleton/raspi-dash) — Flask-based Raspberry Pi system monitor that served as the original dashboard this project replaces
+- [Hailo-10H Web Dashboard](https://github.com/kristoffersingleton/RPI-Hailo-10H-Web-Dashboard) — Web dashboard for the Hailo-10H NPU, also replaced by this project
+
 ### TUI Framework
 
 - **ratatui** — Rust TUI library (successor to tui-rs)

@@ -16,7 +16,7 @@ pub async fn start_collectors(
         let s = state.clone();
         let nodes = inventory_nodes.clone();
         let path = inventory_path.clone();
-        async move { network::run(s, nodes, path).await }
+        async move { network::run(s, nodes, path, agent_port).await }
     });
 
     tokio::spawn({
