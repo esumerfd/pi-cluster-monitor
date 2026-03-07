@@ -4,7 +4,6 @@ resolver = "2"
 
 [workspace.metadata.dist]
 cargo-dist-version = "0.31.0"
-ci = "github"
 installers = ["shell"]
 targets = [
   "aarch64-apple-darwin",
