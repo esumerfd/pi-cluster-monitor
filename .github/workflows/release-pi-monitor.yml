@@ -55,12 +55,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # - target: aarch64-apple-darwin   # macOS Apple Silicon
-          #   runner: macos-14
-          - target: x86_64-apple-darwin    # macOS Intel (cross-compiled from Apple Silicon)
+          - target: aarch64-apple-darwin
             runner: macos-14
-          # - target: x86_64-unknown-linux-gnu
-          #   runner: ubuntu-latest
+          - target: x86_64-apple-darwin
+            runner: macos-14
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -81,39 +81,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ matrix.target }}-cargo-
 
-      - name: Install cargo-dist
-        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/latest/download/cargo-dist-installer.sh | sh
-
       - name: Build
-        run: cargo dist build --target ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.target }} -p pi-monitor
 
-      - name: Upload platform tarball to GitHub Release
+      - name: Package binary
+        id: package
+        run: |
+          archive="pi-monitor-${{ needs.prepare.outputs.tag }}-${{ matrix.target }}.tar.gz"
+          tar czf "$archive" -C "target/${{ matrix.target }}/release" pi-monitor
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+
+      - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
-          files: target/distrib/*
+          files: ${{ steps.package.outputs.archive }}
           generate_release_notes: true
-
-  # After all platform binaries are uploaded, generate the cross-platform
-  # shell installer script and attach it to the same release.
-  installer:
-    name: Generate shell installer
-    needs: [prepare, build]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install cargo-dist
-        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/latest/download/cargo-dist-installer.sh | sh
-
-      - name: Generate installer script
-        run: cargo dist build --artifacts=global
-
-      - name: Upload installer to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.prepare.outputs.tag }}
-          files: target/distrib/*
