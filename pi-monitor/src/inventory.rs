@@ -134,22 +134,17 @@ all:
         worker2:
 "#;
 
-    fn parse_str(yaml: &str) -> Vec<InventoryNode> {
-        let tmp = tempfile(yaml);
-        parse(&tmp).expect("parse failed")
-    }
-
-    fn tempfile(content: &str) -> std::path::PathBuf {
+    fn parse_str(test_name: &str, yaml: &str) -> Vec<InventoryNode> {
         use std::io::Write;
-        let path = std::env::temp_dir().join("pi-monitor-test-inventory.yml");
+        let path = std::env::temp_dir().join(format!("pi-monitor-test-{}.yml", test_name));
         let mut f = std::fs::File::create(&path).unwrap();
-        f.write_all(content.as_bytes()).unwrap();
-        path
+        f.write_all(yaml.as_bytes()).unwrap();
+        parse(&path).expect("parse failed")
     }
 
     #[test]
     fn parses_all_hosts() {
-        let nodes = parse_str(SAMPLE);
+        let nodes = parse_str("parses_all_hosts", SAMPLE);
         assert_eq!(nodes.len(), 3);
         let names: Vec<_> = nodes.iter().map(|n| n.name.as_str()).collect();
         assert!(names.contains(&"control"));
@@ -159,7 +154,7 @@ all:
 
     #[test]
     fn ansible_host_values() {
-        let nodes = parse_str(SAMPLE);
+        let nodes = parse_str("ansible_host_values", SAMPLE);
         let control = nodes.iter().find(|n| n.name == "control").unwrap();
         assert_eq!(control.ansible_host, "control.local");
         let w1 = nodes.iter().find(|n| n.name == "worker1").unwrap();
@@ -168,7 +163,7 @@ all:
 
     #[test]
     fn group_membership() {
-        let nodes = parse_str(SAMPLE);
+        let nodes = parse_str("group_membership", SAMPLE);
         let control = nodes.iter().find(|n| n.name == "control").unwrap();
         assert!(control.groups.is_empty(), "control should have no child groups");
         let w1 = nodes.iter().find(|n| n.name == "worker1").unwrap();
@@ -179,7 +174,7 @@ all:
 
     #[test]
     fn no_duplicate_nodes() {
-        let nodes = parse_str(SAMPLE);
+        let nodes = parse_str("no_duplicate_nodes", SAMPLE);
         // worker1 appears in both all.hosts and children.workers.hosts
         let count = nodes.iter().filter(|n| n.name == "worker1").count();
         assert_eq!(count, 1);
