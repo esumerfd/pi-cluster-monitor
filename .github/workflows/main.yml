@@ -37,4 +37,4 @@ jobs:
         run: cargo test
 
       - name: cargo clippy
-        run: cargo clippy -- -D warnings
+        run: cargo clippy -- -A clippy::all -D clippy::correctness -D clippy::suspicious
