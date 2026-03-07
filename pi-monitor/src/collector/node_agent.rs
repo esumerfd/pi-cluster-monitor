@@ -21,7 +21,6 @@ use crate::app::{
 };
 use crate::inventory::InventoryNode;
 
-const DEFAULT_AGENT_PORT: u16 = 8765;
 const POLL_INTERVAL: Duration = Duration::from_secs(5);
 const HTTP_TIMEOUT: Duration = Duration::from_secs(3);
 const TOP_N: usize = 5;
