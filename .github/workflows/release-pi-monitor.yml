@@ -97,3 +97,87 @@ jobs:
           tag_name: ${{ needs.prepare.outputs.tag }}
           files: ${{ steps.package.outputs.archive }}
           generate_release_notes: true
+
+  # After all platform binaries are uploaded, update Formula/pi-monitor.rb
+  # on main so `brew install esumerfd/pi-cluster-monitor/pi-monitor` works.
+  formula:
+    name: Update Homebrew formula
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Download release tarballs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: gh release download "$TAG" --pattern "pi-monitor-${TAG}-*.tar.gz"
+
+      - name: Compute SHA256 checksums
+        id: sha
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          arm64=$(sha256sum "pi-monitor-${TAG}-aarch64-apple-darwin.tar.gz" | awk '{print $1}')
+          x86=$(sha256sum "pi-monitor-${TAG}-x86_64-apple-darwin.tar.gz" | awk '{print $1}')
+          linux=$(sha256sum "pi-monitor-${TAG}-x86_64-unknown-linux-gnu.tar.gz" | awk '{print $1}')
+          echo "arm64=$arm64" >> "$GITHUB_OUTPUT"
+          echo "x86=$x86"     >> "$GITHUB_OUTPUT"
+          echo "linux=$linux" >> "$GITHUB_OUTPUT"
+
+      - name: Write formula
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+          SHA_ARM64: ${{ steps.sha.outputs.arm64 }}
+          SHA_X86: ${{ steps.sha.outputs.x86 }}
+          SHA_LINUX: ${{ steps.sha.outputs.linux }}
+        run: |
+          ver="${TAG#v}"
+          repo="https://github.com/esumerfd/pi-cluster-monitor"
+          cat > Formula/pi-monitor.rb <<FORMULA
+# This file is updated automatically by the release workflow.
+class PiMonitor < Formula
+  desc "TUI for monitoring a Raspberry Pi cluster"
+  homepage "${repo}"
+  version "${ver}"
+
+  on_macos do
+    on_arm do
+      url "${repo}/releases/download/${TAG}/pi-monitor-${TAG}-aarch64-apple-darwin.tar.gz"
+      sha256 "${SHA_ARM64}"
+    end
+    on_intel do
+      url "${repo}/releases/download/${TAG}/pi-monitor-${TAG}-x86_64-apple-darwin.tar.gz"
+      sha256 "${SHA_X86}"
+    end
+  end
+
+  on_linux do
+    url "${repo}/releases/download/${TAG}/pi-monitor-${TAG}-x86_64-unknown-linux-gnu.tar.gz"
+    sha256 "${SHA_LINUX}"
+  end
+
+  def install
+    bin.install "pi-monitor"
+  end
+
+  test do
+    system "#{bin}/pi-monitor", "--version"
+  end
+end
+FORMULA
+
+      - name: Commit and push formula
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/pi-monitor.rb
+          git commit -m "chore: update Homebrew formula to ${TAG}"
+          git push
