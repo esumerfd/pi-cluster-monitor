@@ -6,6 +6,8 @@ Build a Rust-based TUI (Terminal User Interface) that provides quick, at-a-glanc
 
 The primary audience is the operator (me), sitting at a terminal, wanting a single pane of glass for the cluster.
 
+![Pi Cluster Monitor](docs/images/pi-monitor.png)
+
 ## Guiding Principles
 
 - **Fast**: Near real-time data; no waiting for dashboards to load

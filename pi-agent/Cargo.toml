@@ -5,6 +5,9 @@ edition = "2024"
 description = "HTTP agent exposing system metrics for the Pi Cluster Monitor TUI"
 authors = ["Edward Sumeriski <esumerfd@gmail.com>"]
 
+[package.metadata.dist]
+dist = false
+
 [package.metadata.deb]
 maintainer = "Edward Sumeriski <esumerfd@gmail.com>"
 copyright = "2026, Edward Sumeriski"

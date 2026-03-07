@@ -1,4 +1,4 @@
-name: Release
+name: Release pi-agent
 
 on:
   push:
@@ -29,8 +29,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "v${{ inputs.version }}"
-          git push origin "v${{ inputs.version }}"
+          git tag "v${{ inputs.version }}" || true
+          git push origin "v${{ inputs.version }}" || true
 
       - name: Resolve tag name
         id: tag
@@ -78,7 +78,6 @@ jobs:
         run: |
           path=$(ls target/aarch64-unknown-linux-gnu/debian/*.deb)
           echo "path=$path" >> "$GITHUB_OUTPUT"
-          echo "name=$(basename $path)" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release and upload .deb
         uses: softprops/action-gh-release@v2
