@@ -5,11 +5,6 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to release (e.g. 0.1.0)'
-        required: true
-        type: string
 
 env:
   CARGO_TERM_COLOR: always
@@ -24,22 +19,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create and push tag (workflow_dispatch only)
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "v${{ inputs.version }}" || true
-          git push origin "v${{ inputs.version }}" || true
-
       - name: Resolve tag name
         id: tag
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "name=v${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+            latest=$(gh release list --limit 1 --json tagName --jq '.[0].tagName // "v0.0.0"')
+            ver=${latest#v}
+            IFS='.' read -r major minor patch <<< "$ver"
+            minor=$((minor + 1))
+            new_tag="v${major}.${minor}.0"
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag "$new_tag" || true
+            git push origin "$new_tag" || true
+            echo "name=$new_tag" >> "$GITHUB_OUTPUT"
           else
             echo "name=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
           fi
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Install Rust stable + aarch64 target
         uses: dtolnay/rust-toolchain@stable
