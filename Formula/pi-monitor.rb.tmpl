@@ -1,0 +1,30 @@
+# This file is updated automatically by the release workflow.
+class PiMonitor < Formula
+  desc "TUI for monitoring a Raspberry Pi cluster"
+  homepage "https://github.com/esumerfd/pi-cluster-monitor"
+  version "{{VER}}"
+
+  on_macos do
+    on_arm do
+      url "https://github.com/esumerfd/pi-cluster-monitor/releases/download/{{TAG}}/pi-monitor-{{TAG}}-aarch64-apple-darwin.tar.gz"
+      sha256 "{{SHA_ARM64}}"
+    end
+    on_intel do
+      url "https://github.com/esumerfd/pi-cluster-monitor/releases/download/{{TAG}}/pi-monitor-{{TAG}}-x86_64-apple-darwin.tar.gz"
+      sha256 "{{SHA_X86}}"
+    end
+  end
+
+  on_linux do
+    url "https://github.com/esumerfd/pi-cluster-monitor/releases/download/{{TAG}}/pi-monitor-{{TAG}}-x86_64-unknown-linux-gnu.tar.gz"
+    sha256 "{{SHA_LINUX}}"
+  end
+
+  def install
+    bin.install "pi-monitor"
+  end
+
+  test do
+    system "#{bin}/pi-monitor", "--version"
+  end
+end
