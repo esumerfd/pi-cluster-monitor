@@ -8,6 +8,15 @@ The primary audience is the operator (me), sitting at a terminal, wanting a sing
 
 ![Pi Cluster Monitor](docs/images/pi-monitor.png)
 
+## Installation
+
+### macOS / Linux
+
+```bash
+brew tap esumerfd/pi-cluster-monitor https://github.com/esumerfd/pi-cluster-monitor
+brew install pi-monitor
+```
+
 ## Guiding Principles
 
 - **Fast**: Near real-time data; no waiting for dashboards to load
